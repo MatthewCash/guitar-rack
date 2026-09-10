@@ -1,0 +1,25 @@
+--- a/ir.cc
++++ b/ir.cc
+@@ -587,8 +587,11 @@ static gpointer IR_configurator_thread(gpointer data) {
+ 							  ir->port_fhash_1,
+ 							  ir->port_fhash_2);
+ 			//printf("IR confthread: fhash = %016" PRIx64 "\n", fhash);
+-			if (fhash) {
+-				char * filename = get_path_from_key(keyfile, fhash);
++			const char * default_ir = getenv("GUITAR_RACK_IR");
++			if (fhash || (default_ir && *default_ir)) {
++				char * filename = fhash
++					? get_path_from_key(keyfile, fhash)
++					: strdup(default_ir);
+ 				if (filename) {
+ 					//printf("  load filename=%s\n", filename);
+ 					ir->source_path = filename;
+@@ -608,7 +611,7 @@ static gpointer IR_configurator_thread(gpointer data) {
+ 						free(ir->source_path);
+ 						ir->source_path = NULL;
+ 					}
+-				} else {
++				} else if (fhash) {
+ 					fprintf(stderr, "IR: fhash=%016" PRIx64
+ 						" was not found in DB\n", fhash);
+ 				}

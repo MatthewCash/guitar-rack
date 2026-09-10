@@ -1,0 +1,25 @@
+[package]
+name = "guitar-rack"
+version = "0.1.0"
+edition = "2024"
+description = "A resilient LV2 guitar effects rack for PipeWire"
+license = "GPL-3.0-only"
+build = "build.rs"
+
+[dependencies]
+anyhow = "1"
+cxx = "1"
+libc = "0.2"
+log = "0.4"
+env_logger = "0.11"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["fs", "io-util", "macros", "net", "process", "rt", "signal", "sync", "time"] }
+
+[build-dependencies]
+cxx-build = "1"
+pkg-config = "0.3"
+
+[profile.release]
+lto = "thin"
+strip = true

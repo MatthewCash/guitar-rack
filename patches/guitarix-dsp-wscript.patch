@@ -1,0 +1,19 @@
+--- a/trunk/src/gx_head/wscript	2026-08-02 11:06:23.016855385 -0700
++++ b/trunk/src/gx_head/wscript	2026-08-02 11:06:23.017855436 -0700
+@@ -227,6 +227,16 @@
+         install_path = bld.env.BINDIR,
+         mapfile = "guitarix.map",
+         )
++    # guitar-rack-dsp: headless monolithic DSP child. Same engine sources as
++    # the guitarix binary (minus all GUI sources) plus our own main.cpp.
++    bld.program(
++        includes = incl,
++        source = sources_engine + sources_engine_shared + ['./guitar-rack-dsp.cpp'],
++        use = uselib,
++        target = 'guitar-rack-dsp',
++        chmod = 0o755,
++        install_path = bld.env.BINDIR,
++        )
+     bld.install_files(bld.env.GX_BUILDER_DIR, builder_files, chmod=0o644)
+     if "RUN_DOXYGEN" in os.environ:
+         # save source file list and include paths for use by doxygen

@@ -1,0 +1,69 @@
+diff --git a/trunk/src/gx_head/engine/gx_jack.cpp b/trunk/src/gx_head/engine/gx_jack.cpp
+index 755e039..5b6d621 100644
+--- a/trunk/src/gx_head/engine/gx_jack.cpp
++++ b/trunk/src/gx_head/engine/gx_jack.cpp
+@@ -91,6 +91,12 @@ string GxJack::get_default_instancename() {
+ static const char *jack_amp_postfix = "_amp";
+ static const char *jack_fx_postfix = "_fx";
+ 
++// PCM2900C capture_FR noise ceiling with the transmitter off.
++static constexpr float guitar_rack_noise_floor = 0.00032f;
++static float guitar_rack_gate_gain = 0.0f;
++static float guitar_rack_gate_start = 0.0f;
++static bool guitar_rack_gate_open = false;
++
+ string GxJack::get_default_instancename() {
+     static const char *default_jack_instancename = "gx_head";
+     return default_jack_instancename;
+@@ -721,9 +727,29 @@ int __rt_func GxJack::gx_jack_process(jack_nframes_t nframes, void *arg) {
+     if (!self.single_client) {
+         obuf = get_float_buf(self.ports.insert_out.port, nframes);
+     } 
++    float *input = get_float_buf(self.ports.input.port, nframes);
++    float square_sum = 0.0f;
++    for (jack_nframes_t frame = 0; frame < nframes; ++frame) {
++        square_sum += input[frame] * input[frame];
++    }
++    const float rms = std::sqrt(square_sum / nframes);
++    if (rms > guitar_rack_noise_floor) {
++        guitar_rack_gate_open = true;
++    } else if (rms < guitar_rack_noise_floor * 0.75f) {
++        guitar_rack_gate_open = false;
++    }
++    guitar_rack_gate_start = guitar_rack_gate_gain;
++    const float target = guitar_rack_gate_open ? 1.0f : 0.0f;
++    const float transition_seconds = guitar_rack_gate_open ? 0.002f : 0.08f;
++    const float step = nframes / (transition_seconds * self.jack_sr);
++    if (target > guitar_rack_gate_gain) {
++        guitar_rack_gate_gain = std::min(target, guitar_rack_gate_gain + step);
++    } else {
++        guitar_rack_gate_gain = std::max(target, guitar_rack_gate_gain - step);
++    }
+ 	self.engine.mono_chain.process(
+ 	    nframes,
+-	    get_float_buf(self.ports.input.port, nframes),
++	    input,
+ 	    obuf);
+ 
+     if (self.bypass_insert && !self.single_client) {
+@@ -770,10 +794,18 @@ int __rt_func GxJack::gx_jack_insert_process(jack_nframes_t nframes, void *arg) {
+ 	} else {
+ 	    ibuf = self.insert_buffer;
+ 	}
++    float *output1 = get_float_buf(self.ports.output1.port, nframes);
++    float *output2 = get_float_buf(self.ports.output2.port, nframes);
+ 	self.engine.stereo_chain.process(
+ 	    nframes, ibuf, ibuf,
+-	    get_float_buf(self.ports.output1.port, nframes),
+-	    get_float_buf(self.ports.output2.port, nframes));
++	    output1, output2);
++    const float gain_delta = guitar_rack_gate_gain - guitar_rack_gate_start;
++    for (jack_nframes_t frame = 0; frame < nframes; ++frame) {
++        const float gain = guitar_rack_gate_start
++            + gain_delta * static_cast<float>(frame + 1) / nframes;
++        output1[frame] *= gain;
++        output2[frame] *= gain;
++    }
+     }
+     gx_system::measure_stop();
+     self.engine.stereo_chain.post_rt_finished();
