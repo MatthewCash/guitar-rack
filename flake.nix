@@ -14,7 +14,6 @@
           guitarixDsp = pkgs.guitarix.overrideAttrs (prev: {
             patches = (prev.patches or [ ]) ++ [
               ./patches/guitarix-dsp-wscript.patch
-              ./patches/guitarix-dsp-noise-gate.patch
             ];
             postPatch = (prev.postPatch or "") + ''
               cp ${./dsp/guitar-rack-dsp.cpp} src/gx_head/guitar-rack-dsp.cpp
@@ -68,7 +67,6 @@
           guitarixDsp = pkgs.guitarix.overrideAttrs (prev: {
             patches = (prev.patches or [ ]) ++ [
               ./patches/guitarix-dsp-wscript.patch
-              ./patches/guitarix-dsp-noise-gate.patch
             ];
             postPatch = (prev.postPatch or "") + ''
               cp ${./dsp/guitar-rack-dsp.cpp} src/gx_head/guitar-rack-dsp.cpp
